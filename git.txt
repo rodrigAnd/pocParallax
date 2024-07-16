@@ -121,3 +121,37 @@ class StackItemDecorator(private val overlapMargin: Int, private val maxElevatio
     }
 }
 
+class MainActivity : AppCompatActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        val fixedCardContainer: FrameLayout = findViewById(R.id.fixed_card_container)
+        val emptyCardView = LayoutInflater.from(this).inflate(R.layout.item_empty, fixedCardContainer, false)
+        fixedCardContainer.addView(emptyCardView)
+
+        val recyclerView: RecyclerView = findViewById(R.id.recyclerView)
+        val items = listOf("Card 1", "Card 2", "Card 3", "Card 4", "Card 5")
+
+        val adapter = CardAdapter(items)
+        recyclerView.adapter = adapter
+        recyclerView.layoutManager = LinearLayoutManager(this)
+
+        val overlapMargin = resources.getDimensionPixelSize(R.dimen.overlap_margin)
+        val maxElevation = resources.getDimension(R.dimen.max_elevation)
+        recyclerView.addItemDecoration(StackItemDecorator(overlapMargin, maxElevation, fixedCardContainer))
+
+        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                if (dy != 0) {
+                    fixedCardContainer.visibility = View.VISIBLE
+                } else {
+                    fixedCardContainer.visibility = View.GONE
+                }
+            }
+        })
+    }
+}
+
