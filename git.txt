@@ -257,3 +257,70 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
+bbbbbhh
+
+class StackItemDecorator(private val overlapMargin: Int, private val maxElevation: Float, private val fixedCardContainer: FrameLayout) : RecyclerView.ItemDecoration() {
+    override fun onDrawOver(c: Canvas, parent: RecyclerView, state: RecyclerView.State) {
+        val childCount = parent.childCount
+        val layoutManager = parent.layoutManager as LinearLayoutManager
+
+        val parentMidPoint = parent.top + parent.height / 2f
+        val fixedCardMidPoint = fixedCardContainer.top + fixedCardContainer.height / 2f
+
+        for (i in 0 until childCount) {
+            val child = parent.getChildAt(i)
+            val position = parent.getChildAdapterPosition(child)
+
+            if (position != RecyclerView.NO_POSITION) {
+                val childMidPoint = (child.top + child.bottom) / 2f
+                val distanceFromCenter = fixedCardMidPoint - childMidPoint
+                val scale = 1 - Math.min(Math.abs(distanceFromCenter) / parent.height, 0.5f)
+                val elevation = maxElevation * (1 - Math.abs(distanceFromCenter) / parent.height)
+
+                if (distanceFromCenter < 0) {
+                    child.translationY = overlapMargin * (1 - scale)
+                } else {
+                    child.translationY = -overlapMargin * (1 - scale)
+                }
+                child.scaleX = scale
+                child.scaleY = scale
+                child.elevation = elevation
+                child.translationZ = 1f // Ensure cards are above the fixed card
+            }
+        }
+    }
+}
+
+class MainActivity : AppCompatActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        val fixedCardContainer: FrameLayout = findViewById(R.id.fixed_card_container)
+        val emptyCardView = LayoutInflater.from(this).inflate(R.layout.item_empty, fixedCardContainer, false)
+        fixedCardContainer.addView(emptyCardView)
+
+        val recyclerView: RecyclerView = findViewById(R.id.recyclerView)
+        val items = listOf("Card 1", "Card 2", "Card 3", "Card 4", "Card 5")
+
+        val adapter = CardAdapter(items)
+        recyclerView.adapter = adapter
+        recyclerView.layoutManager = LinearLayoutManager(this)
+
+        val overlapMargin = resources.getDimensionPixelSize(R.dimen.overlap_margin)
+        val maxElevation = resources.getDimension(R.dimen.max_elevation)
+        recyclerView.addItemDecoration(StackItemDecorator(overlapMargin, maxElevation, fixedCardContainer))
+
+        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                if (dy != 0) {
+                    fixedCardContainer.visibility = View.VISIBLE
+                } else {
+                    fixedCardContainer.visibility = View.GONE
+                }
+            }
+        })
+    }
+}
