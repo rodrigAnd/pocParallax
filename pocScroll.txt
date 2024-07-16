@@ -1,0 +1,173 @@
+class MainActivity : AppCompatActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        val fixedCardContainer: FrameLayout = findViewById(R.id.fixed_card_container)
+        val emptyCardView = LayoutInflater.from(this).inflate(R.layout.item_empty, fixedCardContainer, false)
+        fixedCardContainer.addView(emptyCardView)
+
+        val recyclerView: RecyclerView = findViewById(R.id.recyclerView)
+        val items = listOf("Card 1", "Card 2", "Card 3", "Card 4", "Card 5")
+
+        val adapter = CardAdapter(items)
+        recyclerView.adapter = adapter
+        recyclerView.layoutManager = LinearLayoutManager(this)
+
+        val overlapMargin = resources.getDimensionPixelSize(R.dimen.overlap_margin)
+        val maxElevation = resources.getDimension(R.dimen.max_elevation)
+        val itemDecorator = StackItemDecorator(overlapMargin, maxElevation, fixedCardContainer)
+        recyclerView.addItemDecoration(itemDecorator)
+
+        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                if (dy != 0) {
+                    fixedCardContainer.visibility = View.VISIBLE
+                    itemDecorator.setScrolling(true)
+                } else {
+                    fixedCardContainer.visibility = View.GONE
+                    itemDecorator.setScrolling(false)
+                }
+                recyclerView.invalidateItemDecorations()
+            }
+        })
+    }
+}
+
+
+class StackItemDecorator(private val overlapMargin: Int, private val maxElevation: Float, private val fixedCardContainer: FrameLayout) : RecyclerView.ItemDecoration() {
+
+    private var isScrolling = false
+
+    override fun onDrawOver(c: Canvas, parent: RecyclerView, state: RecyclerView.State) {
+        val childCount = parent.childCount
+        val layoutManager = parent.layoutManager as LinearLayoutManager
+
+        val fixedCardMidPoint = fixedCardContainer.top + fixedCardContainer.height / 2f
+
+        for (i in 0 until childCount) {
+            val child = parent.getChildAt(i)
+            val position = parent.getChildAdapterPosition(child)
+
+            if (position != RecyclerView.NO_POSITION) {
+                val childMidPoint = (child.top + child.bottom) / 2f
+                val distanceFromCenter = fixedCardMidPoint - childMidPoint
+
+                if (isScrolling) {
+                    val scale = 1 - Math.min(Math.abs(distanceFromCenter) / parent.height, 0.5f)
+                    val elevation = maxElevation * (1 - Math.abs(distanceFromCenter) / parent.height)
+
+                    child.translationY = -overlapMargin * (1 - scale)
+                    child.scaleX = scale
+                    child.scaleY = scale
+                    child.elevation = elevation
+                } else {
+                    child.translationY = 0f
+                    child.scaleX = 1f
+                    child.scaleY = 1f
+                    child.elevation = 0f
+                }
+                child.translationZ = 1f // Ensure cards are above the fixed card
+            }
+        }
+    }
+
+    fun setScrolling(scrolling: Boolean) {
+        isScrolling = scrolling
+    }
+}
+
+class CardAdapter(private val items: List<String>) : RecyclerView.Adapter<CardAdapter.CardViewHolder>() {
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CardViewHolder {
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_card, parent, false)
+        return CardViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: CardViewHolder, position: Int) {
+        holder.bind(items[position])
+    }
+
+    override fun getItemCount(): Int = items.size
+
+    class CardViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val imageView: ImageView = itemView.findViewById(R.id.card_image)
+        private val textView: TextView = itemView.findViewById(R.id.card_text)
+
+        fun bind(text: String) {
+            textView.text = text
+            // Configure the image if needed
+        }
+    }
+}
+
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="200dp"
+    android:layout_margin="16dp"
+    android:elevation="4dp">
+
+    <ImageView
+        android:id="@+id/card_image"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:src="@drawable/sample_image" />
+
+    <TextView
+        android:id="@+id/card_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:text="Card Text"
+        android:textColor="@android:color/white"
+        android:textSize="24sp"
+        android:background="@android:color/black"
+        android:padding="8dp" />
+</FrameLayout>
+
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="200dp"
+    android:layout_margin="16dp"
+    android:background="@android:color/transparent">
+</FrameLayout>
+
+ 
+
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <FrameLayout
+        android:id="@+id/fixed_card_container"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:layout_margin="16dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:visibility="gone"
+        android:elevation="8dp">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent" />
+    </FrameLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
