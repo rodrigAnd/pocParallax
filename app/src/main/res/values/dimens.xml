@@ -1,0 +1,4 @@
+<resources>
+    <dimen name="overlap_margin">50dp</dimen>
+    <dimen name="max_elevation">8dp</dimen>
+</resources>
